@@ -1,7 +1,9 @@
 <?php
 namespace SuperPay\TransferAccounts;
+
 use SuperPay;
-class Wechat extends  SuperPay\WechatBase implements Commit
+
+class Wechat extends SuperPay\WechatBase implements Commit
 {
     protected $param = [];
     /**
@@ -25,18 +27,27 @@ class Wechat extends  SuperPay\WechatBase implements Commit
      */
     public function commit($param)
     {
-        $param =array_merge($param,$this->param);
-        echo '<pre>';
-        $url = 'https://api.mch.weixin.qq.com/mmpaymkttransfers/promotion/transfers';
+        $param = array_merge($param, $this->param);
+
         $param['spbill_create_ip'] = $_SERVER['SERVER_ADDR'];
-        $payKey = $param['pay_key'];
+        $payKey                    = $param['pay_key'];
         unset($param['pay_key']);
-        $param['sign']             = $this->getSign($param,$payKey);
+        $param['amount']    = $param['amount'] * 100;
+        $param['nonce_str'] = $this->createNoncestr();
+        $param['sign']      = $this->getSign($param, $payKey);
         print_r($param);
-        $xmlData                   = $this->arrayToXml($param);
+        $xmlData = $this->arrayToXml($param);
         print_r($xmlData);
-        $return                    = $this->xmlToArray($this->postXmlCurl($xmlData, $url, 60,true));
-        
+        if (!array_key_exists('openid', $param)) {
+            $this->bank($xmlData);
+        }
+    }
+
+    protected function bank($data)
+    {
+        $url    = 'https://api.mch.weixin.qq.com/mmpaysptrans/pay_bank';
+        $return = $this->xmlToArray($this->postXmlCurl($data, $url, 60, true));
+
         print_r($return);
     }
 }

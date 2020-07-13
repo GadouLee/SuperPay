@@ -2,7 +2,7 @@
 namespace SuperPay;
 class Init
 {
-	$this->baseParam  = null;
+	protected $baseParam  = null;
 	public function __construct($param)
 	{
 		$this->baseParam = $param;
