@@ -26,6 +26,14 @@ $data = [
 ];
 
 // 微信转账，到银行卡
+// 1.生成pubKey.pem
+$res = $obj->query($data,'getPublicKey');
+file_put_contents('cert/pubkey.pem', $res['pub_key']);
+
+// 2.使用openssl转换格式，进入cert目录执行如下命令
+openssl rsa -RSAPublicKey_in -in pubkey.pem -pubout  生成后的文件名.pem   
+
+// 3.发起转账		   
 $data = [
     'class_type_name'  => 'TransferAccounts', // 操作类型：TransferAccounts 提现
     'class_name'       => 'Wechat', // 要调用的类名支持：Wechat
@@ -36,4 +44,5 @@ $data = [
     'amount'           => '', // 企业付款金额，单位为元
     'desc'             => '', // 企业付款备注，必填。注意：备注中的敏感词会被转成字符*
 ];
+
 $obj->query($data);

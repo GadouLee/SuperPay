@@ -6,7 +6,9 @@ class WechatBase
 
     protected static function postXmlCurl($xml, $url, $second = 30, $cert = false)
     {
-        $isdir = "/cert/"; //证书位置
+        $isdir = "cert/"; //证书位置
+        // $isdir = "";
+        // var_dump($isdir . 'apiclient_cert.pem');
         $ch    = curl_init(); //初始化curl
         curl_setopt($ch, CURLOPT_TIMEOUT, $second); //设置执行最长秒数
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); //要求结果为字符串且输出到屏幕上
@@ -39,6 +41,7 @@ class WechatBase
     //数组转换成 xml
     protected function arrayToXml($arr)
     {
+        print_r($arr);
         $xml = '<xml>';
         foreach ($arr as $key => $val) {
             if (is_array($val)) {
@@ -61,22 +64,14 @@ class WechatBase
         return $val;
     }
 
-    //作用：产生随机字符串，不长于 32 位
-    protected function createNoncestr($length = 32)
-    {
-        $chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-        $str   = '';
-        for ($i = 0; $i < $length; $i++) {
-            $str .= substr($chars, mt_rand(0, strlen($chars) - 1), 1);
-        }
-        return $str;
-    }
 
     //作用：格式化参数，签名过程需要使用
     protected function formatBizQueryParaMap($paraMap, $urlencode)
     {
         $buff = '';
         ksort($paraMap);
+        echo '=================';
+        print_r($paraMap);
         foreach ($paraMap as $k => $v) {
             if ($urlencode) {
                 $v = urlencode($v);
@@ -100,10 +95,11 @@ class WechatBase
         $String = $this->formatBizQueryParaMap($Parameters, false);
         //签名步骤二：在 string 后加入 KEY
         $String = $String . '&key=' . $pay_key;
+        var_dump($String);
         //签名步骤三：MD5 加密
         $String = md5($String);
         //签名步骤四：所有字符转为大写
         $result_ = strtoupper($String);
-        return $result_;
+        return $String;
     }
 }

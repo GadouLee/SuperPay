@@ -6,6 +6,8 @@ use SuperPay;
 class Wechat extends SuperPay\WechatBase implements Commit
 {
     protected $param = [];
+    protected $mchid = '';
+    protected $payKey = '';
     /**
      *  @param mch_appid        是
      *  @param appid            是 申请商户号的appid或商户号绑定的appid
@@ -13,7 +15,9 @@ class Wechat extends SuperPay\WechatBase implements Commit
      */
     public function __construct($param)
     {
-        $this->param = $param;
+        // $this->param = $param;
+        $this->mchid = $param['mchid'];
+        $this->payKey = $param['pay_key'];
     }
 
     /**
@@ -27,27 +31,47 @@ class Wechat extends SuperPay\WechatBase implements Commit
      */
     public function commit($param)
     {
-        $param = array_merge($param, $this->param);
+        // $param = array_merge($param, $this->param);
 
         $param['spbill_create_ip'] = $_SERVER['SERVER_ADDR'];
-        $payKey                    = $param['pay_key'];
-        unset($param['pay_key']);
+        $payKey                    = $this->payKey;
         $param['amount']    = $param['amount'] * 100;
-        $param['nonce_str'] = $this->createNoncestr();
-        $param['sign']      = $this->getSign($param, $payKey);
-        print_r($param);
-        $xmlData = $this->arrayToXml($param);
-        print_r($xmlData);
+        $param['nonce_str'] = md5(time().mt_rand(1,9999999));
         if (!array_key_exists('openid', $param)) {
-            $this->bank($xmlData);
+            return $this->bank($param);
         }
     }
 
-    protected function bank($data)
+    protected function bank($param)
     {
         $url    = 'https://api.mch.weixin.qq.com/mmpaysptrans/pay_bank';
-        $return = $this->xmlToArray($this->postXmlCurl($data, $url, 60, true));
+        require('Rsa.php');
+        $rsa = new RSA(file_get_contents('cert/NewPubKey.pem'), '');
+        $this->param = [
+            'mch_id'    => $this->mchid,//商户号
+            'partner_trade_no'   => $param['partner_trade_no'],//商户付款单号
+            'nonce_str'           => md5(time()), //随机串
+            'enc_bank_no'         => $rsa->public_encrypt($param['enc_bank_no']),//收款方银行卡号RSA加密
+            'enc_true_name'       => $rsa->public_encrypt($param['enc_true_name']),//收款方姓名RSA加密
+            'bank_code'           => $param['bank_code'],//收款方开户行
+            'amount'              => $param['amount']*100,//付款金额
+        ];
+        return $this->send($url);
 
-        print_r($return);
+    }
+    public function getPublicKey($param=null){
+        $url = 'https://fraud.mch.weixin.qq.com/risk/getpublickey';
+        $this->param = [
+            'mch_id'    => $this->mchid,//商户ID
+            'nonce_str' => md5(time()),
+            'sign_type' => 'MD5'
+        ];
+         //将数据发送到接口地址
+        return $this->send($url);
+    }
+    protected function send($url){
+        $this->param['sign'] =$this->getSign($this->param,$this->payKey);
+        $xml = $this->arrayToXml($this->param);
+      $returnData = $this->postXmlCurl($xml, $url, 60, true);
     }
 }
